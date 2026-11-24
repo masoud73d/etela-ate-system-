@@ -302,7 +302,7 @@
                 <!-- Container for Scanned Lenses -->
                 <div id="camera-lenses-container" class="space-y-2">
                     <p class="text-[11px] text-slate-500 dark:text-slate-400 text-center py-2 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-slate-200/50 dark:border-slate-800/50">
-                        برای مشاهده مگاپیکسل، نرخ فریم، زوم و وضعیت فلش هر لنز، روی دکمه اسکن بالا کلیک کنید.
+                        با اسکن، فقط مشخصاتی نمایش داده می‌شود که سیستم اندروید مستقیماً از سخت‌افزار دوربین گزارش کند.
                     </p>
                 </div>
             </section>
@@ -502,10 +502,10 @@
                         <span class="text-[11px] text-slate-500 dark:text-slate-400">اندازه‌گیری واقعی دانلود، آپلود و پینگ</span>
                     </div>
                 </div>
-                <div class="grid grid-cols-2 gap-2 mb-3">
-                    <div class="rounded-xl bg-slate-100 dark:bg-slate-900/70 p-3 text-center"><div class="text-[10px] text-slate-500">دانلود</div><div id="speed-download" class="text-lg font-black dir-ltr">—</div><div class="text-[10px] text-slate-500">Mbps</div></div>
-                    <div class="rounded-xl bg-slate-100 dark:bg-slate-900/70 p-3 text-center"><div class="text-[10px] text-slate-500">آپلود</div><div id="speed-upload" class="text-lg font-black dir-ltr">—</div><div class="text-[10px] text-slate-500">Mbps</div></div>
-                    <div class="col-span-2 w-1/2 justify-self-center rounded-xl bg-slate-100 dark:bg-slate-900/70 p-3 text-center"><div class="text-[10px] text-slate-500">پینگ</div><div id="speed-ping" class="text-lg font-black dir-ltr">—</div><div class="text-[10px] text-slate-500">ms</div></div>
+                <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px;width:100%;">
+                    <div class="rounded-xl bg-slate-100 dark:bg-slate-900/70 p-3 text-center" style="grid-column:1;grid-row:1;"><div class="text-[10px] text-slate-500">دانلود</div><div id="speed-download" class="text-lg font-black dir-ltr">—</div><div class="text-[10px] text-slate-500">Mbps</div></div>
+                    <div class="rounded-xl bg-slate-100 dark:bg-slate-900/70 p-3 text-center" style="grid-column:2;grid-row:1;"><div class="text-[10px] text-slate-500">آپلود</div><div id="speed-upload" class="text-lg font-black dir-ltr">—</div><div class="text-[10px] text-slate-500">Mbps</div></div>
+                    <div class="rounded-xl bg-slate-100 dark:bg-slate-900/70 p-3 text-center" style="grid-column:1 / 3;grid-row:2;width:50%;justify-self:center;"><div class="text-[10px] text-slate-500">پینگ</div><div id="speed-ping" class="text-lg font-black dir-ltr">—</div><div class="text-[10px] text-slate-500">ms</div></div>
                 </div>
                 <p id="speed-test-status" class="text-[11px] text-slate-500 dark:text-slate-400 text-center mb-3">برای شروع، دکمه زیر را بزنید. تست به اینترنت نیاز دارد.</p>
                 <button id="speed-test-button" onclick="runInternetSpeedTest()" class="w-full py-2.5 px-3 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold transition-all shadow-md active:scale-95">شروع تست سرعت</button>
