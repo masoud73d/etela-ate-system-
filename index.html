@@ -629,6 +629,11 @@
             const rawModelValue = String(model).trim();
             const embeddedKnownCode = rawModelValue.match(/2312DRA50[GC]/i);
             const originalModelCode = embeddedKnownCode ? embeddedKnownCode[0].toUpperCase() : rawModelValue;
+
+            // Update known battery capacity immediately from the raw browser/device hints.
+            // Do not wait for the optional online device database lookup to finish.
+            updateBatteryCapacity(ua + ' ' + rawModelValue, originalModelCode);
+
             const matchedDevice = await findCommercialDevice(originalModelCode);
 
             if (matchedDevice && matchedDevice.name) {
