@@ -1270,6 +1270,10 @@
             txt += `🧠 هسته‌های CPU: ${document.getElementById('cpu-cores').textContent}\n`;
             txt += `🔋 ظرفیت اسمی باتری: ${document.getElementById('battery-capacity').textContent}\n`;
             txt += `🔋 درصد شارژ باتری: ${document.getElementById('battery-percentage').textContent}\n`;
+            txt += `🌐 دانلود اینترنت: ${systemReportData['InternetDownload'] || 'هنوز تست نشده'}\n`;
+            txt += `🌐 آپلود اینترنت: ${systemReportData['InternetUpload'] || 'هنوز تست نشده'}\n`;
+            txt += `📶 پینگ: ${systemReportData['InternetPing'] || 'هنوز تست نشده'}\n`;
+            txt += `📉 نوسانات پینگ: ${systemReportData['InternetJitter'] || 'هنوز تست نشده'}\n`;
             txt += `🖥️ رزولوشن فیزیکی: ${document.getElementById('screen-physical').textContent}\n`;
             txt += `🌐 وضعیت شبکه: ${navigator.onLine ? 'آنلاین' : 'آفلاین'}\n`;
             txt += `\nتاریخ ثبت گزارش: ${new Date().toLocaleString('fa-IR')}`;
