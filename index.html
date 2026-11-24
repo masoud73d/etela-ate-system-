@@ -591,11 +591,11 @@
                     if (match) os += ' ' + match[1].replace(/_/g, '.');
                     model = 'آیفون (iPhone)';
                 } else if (/Android/i.test(ua)) {
-                    const androidMatch = ua.match(/Android\\s([0-9.]+)/);
+                    const androidMatch = ua.match(/Android\s([0-9.]+)/);
                     if (androidMatch) os = 'اندروید ' + androidMatch[1];
 
                     // Android browsers may expose a hardware code instead of the marketing name.
-                    const modelMatch = ua.match(/;\\s?([^;]+?)\\s?(Build|Build\\/|\\))/i);
+                    const modelMatch = ua.match(/;\s?([^;]+?)\s?(Build|Build\/|\\))/i);
                     if (modelMatch && modelMatch[1]) model = modelMatch[1].trim();
                 }
             }
