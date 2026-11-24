@@ -934,8 +934,15 @@
             const capacityEl = document.getElementById('battery-capacity');
             if (!capacityEl) return;
 
-            const code = String(modelCode || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-            const name = String(model || '').toLowerCase();
+            // Check every available model hint independently. Some browsers expose
+            // the model code in User-Agent while Client Hints return an empty model.
+            const hints = [model, modelCode, navigator.userAgent || '',
+                (navigator.userAgentData && navigator.userAgentData.model) || ''
+            ].join(' ').toUpperCase();
+            const codeMatch = hints.match(/2312DRA50[GC]/i);
+            const code = codeMatch ? codeMatch[0].toUpperCase() :
+                String(modelCode || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+            const name = hints.toLowerCase();
 
             const knownCapacities = {
                 '2312DRA50G': 5100,
@@ -943,7 +950,7 @@
             };
 
             let capacity = knownCapacities[code] || null;
-            if (!capacity && /redmi note 13 pro 5g/.test(name)) capacity = 5100;
+            if (!capacity && /redmi[ -]?note[ -]?13[ -]?pro[ -]?5g/.test(name)) capacity = 5100;
 
             capacityEl.textContent = capacity
                 ? `${capacity.toLocaleString('en-US')} mAh`
