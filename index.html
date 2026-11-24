@@ -595,7 +595,7 @@
                     if (androidMatch) os = 'اندروید ' + androidMatch[1];
 
                     // Android browsers may expose a hardware code instead of the marketing name.
-                    const modelMatch = ua.match(/;\s?([^;]+?)\s?(Build|Build\/|\\))/i);
+                    const modelMatch = ua.match(/;\s?([^;]+?)\s?(Build|Build\/|\))/i);
                     if (modelMatch && modelMatch[1]) model = modelMatch[1].trim();
                 }
             }
