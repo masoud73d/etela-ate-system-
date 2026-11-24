@@ -491,6 +491,27 @@
                 </div>
             </section>
 
+            <!-- Internet speed test: part of System Information -->
+            <section class="glass-card rounded-2xl p-3.5 sm:p-4 shadow-sm w-full mt-3">
+                <div class="flex items-center gap-2.5 pb-2.5 mb-3 border-b border-slate-200 dark:border-slate-800">
+                    <div class="p-2 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex-shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12h3l3-8 6 16 3-8h3"></path></svg>
+                    </div>
+                    <div>
+                        <h2 class="font-bold text-slate-900 dark:text-slate-100 text-sm">تست سرعت اینترنت</h2>
+                        <span class="text-[11px] text-slate-500 dark:text-slate-400">اندازه‌گیری واقعی دانلود، آپلود و پینگ</span>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+                    <div class="rounded-xl bg-slate-100 dark:bg-slate-900/70 p-3 text-center"><div class="text-[10px] text-slate-500">دانلود</div><div id="speed-download" class="text-lg font-black dir-ltr">—</div><div class="text-[10px] text-slate-500">Mbps</div></div>
+                    <div class="rounded-xl bg-slate-100 dark:bg-slate-900/70 p-3 text-center"><div class="text-[10px] text-slate-500">آپلود</div><div id="speed-upload" class="text-lg font-black dir-ltr">—</div><div class="text-[10px] text-slate-500">Mbps</div></div>
+                    <div class="rounded-xl bg-slate-100 dark:bg-slate-900/70 p-3 text-center"><div class="text-[10px] text-slate-500">پینگ</div><div id="speed-ping" class="text-lg font-black dir-ltr">—</div><div class="text-[10px] text-slate-500">ms</div></div>
+                    <div class="rounded-xl bg-slate-100 dark:bg-slate-900/70 p-3 text-center"><div class="text-[10px] text-slate-500">نوسانات پینگ</div><div id="speed-jitter" class="text-lg font-black dir-ltr">—</div><div class="text-[10px] text-slate-500">ms</div></div>
+                </div>
+                <p id="speed-test-status" class="text-[11px] text-slate-500 dark:text-slate-400 text-center mb-3">برای شروع، دکمه زیر را بزنید. تست به اینترنت نیاز دارد.</p>
+                <button id="speed-test-button" onclick="runInternetSpeedTest()" class="w-full py-2.5 px-3 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold transition-all shadow-md active:scale-95">شروع تست سرعت</button>
+            </section>
+
         </main>
 
 
@@ -871,39 +892,48 @@
                 if (window.AndroidApp && typeof AndroidApp.getCameraHardwareInfo === 'function') {
                     const allCameras = JSON.parse(AndroidApp.getCameraHardwareInfo() || '[]');
                     if (allCameras.length) {
-                        // Only logical camera IDs represent the device's usable camera
-                        // endpoints. Physical IDs are auxiliary sensors and must never
-                        // replace the logical list or inflate/under-count the camera list.
-                        const camerasToShow = allCameras.filter(c => !c.physical);
-
-                        if (camerasToShow.length) {
-                            camerasToShow.forEach((cam, index) => {
-                                const facing = cam.facing === 1 ? 'جلو' : cam.facing === 0 ? 'پشت' : 'نامشخص';
-                                const focalValues = cam.focalLengthsMm || [];
-                                const focal = focalValues.length ? focalValues.join(' / ') + ' mm' : 'نامشخص';
-                                const sensor = cam.sensorWidthMm ? cam.sensorWidthMm + ' × ' + cam.sensorHeightMm + ' mm' : 'نامشخص';
-                                const title = cam.facing === 1 ? 'دوربین سلفی' : cam.facing === 0 ? 'دوربین پشت' : 'دوربین منطقی';
-                                container.insertAdjacentHTML('beforeend', `
-                                  <div class="p-3 rounded-xl bg-slate-100 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 text-right">
-                                    <div class="flex items-center justify-between gap-2 pb-2 mb-2 border-b border-slate-200 dark:border-slate-700">
-                                      <span class="font-bold text-xs text-rose-600 dark:text-rose-400">${title} — ${facing}</span>
-                                      <span class="text-[10px] px-2 py-1 rounded bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300">شناسه دوربین منطقی</span>
-                                    </div>
-                                    <table class="sys-table text-xs"><tbody>
-                                      <tr class="table-row-custom"><td class="text-slate-500">شناسه:</td><td class="font-semibold text-left dir-ltr">${cam.id}</td></tr>
-                                      <tr class="table-row-custom"><td class="text-slate-500">ابعاد آرایه پیکسلی گزارش‌شده:</td><td class="font-semibold text-left dir-ltr">${cam.width || '—'} × ${cam.height || '—'}</td></tr>
-                                      <tr class="table-row-custom"><td class="text-slate-500">فاصله کانونی گزارش‌شده:</td><td class="font-semibold text-left dir-ltr">${focal}</td></tr>
-                                      <tr class="table-row-custom"><td class="text-slate-500">ابعاد سنسور گزارش‌شده:</td><td class="font-semibold text-left dir-ltr">${sensor}</td></tr>
-                                    </tbody></table>
-                                  </div>`);
-                            });
-                            document.getElementById('media-counts').textContent =
-                                camerasToShow.length + ' دوربین منطقی شناسایی‌شده';
+                        // Keep logical camera endpoints and physical sensor IDs visible separately.
+                        const logicalCameras = allCameras.filter(c => !c.physical);
+                        const physicalCameras = allCameras.filter(c => c.physical);
+                        const renderCamera = (cam, index, physical) => {
+                            const facing = cam.facing === 1 ? 'جلو' : cam.facing === 0 ? 'پشت' : 'نامشخص';
+                            const focalValues = cam.focalLengthsMm || [];
+                            const focal = focalValues.length ? focalValues.join(' / ') + ' mm' : 'نامشخص';
+                            const sensor = cam.sensorWidthMm ? cam.sensorWidthMm + ' × ' + cam.sensorHeightMm + ' mm' : 'نامشخص';
+                            const title = physical
+                                ? 'سنسور فیزیکی تکمیلی ' + (index + 1)
+                                : (cam.facing === 1 ? 'دوربین منطقی جلو' : cam.facing === 0 ? 'دوربین منطقی پشت' : 'دوربین منطقی');
+                            container.insertAdjacentHTML('beforeend', `
+                              <div class="p-3 rounded-xl bg-slate-100 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 text-right">
+                                <div class="flex items-center justify-between gap-2 pb-2 mb-2 border-b border-slate-200 dark:border-slate-700">
+                                  <span class="font-bold text-xs text-rose-600 dark:text-rose-400">${title} — ${facing}</span>
+                                  <span class="text-[10px] px-2 py-1 rounded bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300">${physical ? 'شناسه سنسور فیزیکی' : 'شناسه دوربین منطقی'}</span>
+                                </div>
+                                <table class="sys-table text-xs"><tbody>
+                                  <tr class="table-row-custom"><td class="text-slate-500">شناسه:</td><td class="font-semibold text-left dir-ltr">${cam.id}</td></tr>
+                                  <tr class="table-row-custom"><td class="text-slate-500">شناسه دوربین والد:</td><td class="font-semibold text-left dir-ltr">${cam.logicalCameraId || '—'}</td></tr>
+                                  <tr class="table-row-custom"><td class="text-slate-500">ابعاد آرایه پیکسلی گزارش‌شده:</td><td class="font-semibold text-left dir-ltr">${cam.width || '—'} × ${cam.height || '—'}</td></tr>
+                                  <tr class="table-row-custom"><td class="text-slate-500">فاصله کانونی گزارش‌شده:</td><td class="font-semibold text-left dir-ltr">${focal}</td></tr>
+                                  <tr class="table-row-custom"><td class="text-slate-500">ابعاد سنسور گزارش‌شده:</td><td class="font-semibold text-left dir-ltr">${sensor}</td></tr>
+                                </tbody></table>
+                              </div>`);
+                        };
+                        logicalCameras.forEach((cam, index) => renderCamera(cam, index, false));
+                        if (physicalCameras.length) {
                             container.insertAdjacentHTML('beforeend',
-                                '<p class="text-[11px] text-amber-600 dark:text-amber-400 text-center p-2">شناسه‌های فیزیکیِ اضافه برای شمارش دوربین‌ها استفاده نمی‌شوند. وضوح Camera2 ممکن است وضوح پردازش‌شده باشد و مگاپیکسل واقعی سنسور یا نوع لنز را مشخص نمی‌کند.</p>');
-                            btn.textContent = '✓ اسکن سخت‌افزاری کامل شد (اسکن مجدد)';
-                            return;
+                                '<p class="text-xs font-bold text-slate-600 dark:text-slate-300 text-right mt-3">سنسورهای فیزیکی معرفی‌شده توسط سازنده</p>');
+                            physicalCameras.forEach((cam, index) => renderCamera(cam, index, true));
                         }
+                        document.getElementById('media-counts').textContent =
+                            logicalCameras.length + ' دوربین منطقی · ' + physicalCameras.length + ' سنسور فیزیکی تکمیلی';
+                        const note = physicalCameras.length
+                            ? 'شناسه‌های فیزیکی در کنار دوربین‌های منطقی نمایش داده شده‌اند؛ این دو گروه را نباید با هم جمع کرد و تعداد لنزهای مستقل را قطعی دانست.'
+                            : 'این سازنده شناسه سنسورهای فیزیکی را از طریق Camera2 در اختیار برنامه نگذاشته است؛ بنابراین نمایش تمام لنزها و مگاپیکسل واقعی آن‌ها از رابط عمومی اندروید ممکن نیست.';
+                        container.insertAdjacentHTML('beforeend',
+                            '<p class="text-[11px] text-amber-600 dark:text-amber-400 text-center p-2">' +
+                            note + ' وضوح گزارش‌شده نیز لزوماً مگاپیکسل واقعی سنسور نیست.</p>');
+                        btn.textContent = '✓ اسکن سخت‌افزاری کامل شد (اسکن مجدد)';
+                        return;
                     }
                 }
 
@@ -1144,6 +1174,71 @@
                 document.getElementById('battery-bar').style.width = '0%';
                 document.getElementById('battery-charging-badge').textContent = 'در این مرورگر امکان خواندن درصد شارژ وجود ندارد';
                 document.getElementById('battery-charging-badge').title = 'مرورگر این دستگاه رابط Battery Status API را ارائه نمی‌کند.';
+            }
+        }
+
+        // Internet speed test uses Cloudflare's public speed-test endpoints.
+        async function runInternetSpeedTest() {
+            const button = document.getElementById('speed-test-button');
+            const status = document.getElementById('speed-test-status');
+            const downEl = document.getElementById('speed-download');
+            const upEl = document.getElementById('speed-upload');
+            const pingEl = document.getElementById('speed-ping');
+            const jitterEl = document.getElementById('speed-jitter');
+            if (!navigator.onLine) { status.textContent = 'اتصال اینترنت برقرار نیست.'; return; }
+            button.disabled = true;
+            button.textContent = 'در حال انجام تست...';
+            [downEl, upEl, pingEl, jitterEl].forEach(el => el.textContent = '…');
+            const base = 'https://speed.cloudflare.com';
+            const timedFetch = async (url, options = {}) => {
+                const controller = new AbortController();
+                const timer = setTimeout(() => controller.abort(), 25000);
+                const started = performance.now();
+                try {
+                    const response = await fetch(url, {...options, signal: controller.signal, cache:'no-store'});
+                    if (!response.ok) throw new Error('HTTP ' + response.status);
+                    return {response, ms: performance.now() - started};
+                } finally { clearTimeout(timer); }
+            };
+            try {
+                status.textContent = 'در حال اندازه‌گیری پینگ...';
+                const pings = [];
+                for (let i = 0; i < 5; i++) {
+                    const result = await timedFetch(base + '/__down?bytes=1&cache=' + Date.now() + '-' + i);
+                    await result.response.arrayBuffer();
+                    pings.push(result.ms);
+                }
+                const avgPing = pings.reduce((a,b)=>a+b,0) / pings.length;
+                const jitter = pings.slice(1).reduce((sum,v,i)=>sum+Math.abs(v-pings[i]),0) / (pings.length-1);
+                pingEl.textContent = avgPing.toFixed(0);
+                jitterEl.textContent = jitter.toFixed(1);
+
+                status.textContent = 'در حال اندازه‌گیری سرعت دانلود...';
+                const downBytes = 8000000;
+                const down = await timedFetch(base + '/__down?bytes=' + downBytes + '&cache=' + Date.now());
+                await down.response.arrayBuffer();
+                const downloadMbps = downBytes * 8 / (down.ms / 1000) / 1000000;
+                downEl.textContent = downloadMbps.toFixed(2);
+
+                status.textContent = 'در حال اندازه‌گیری سرعت آپلود...';
+                const uploadBytes = new Uint8Array(2000000);
+                const upload = await timedFetch(base + '/__up?cache=' + Date.now(), {
+                    method:'POST', headers:{'Content-Type':'application/octet-stream'}, body:uploadBytes
+                });
+                await upload.response.arrayBuffer();
+                const uploadMbps = uploadBytes.byteLength * 8 / (upload.ms / 1000) / 1000000;
+                upEl.textContent = uploadMbps.toFixed(2);
+                status.textContent = 'تست با موفقیت انجام شد.';
+                systemReportData['InternetDownload'] = downloadMbps.toFixed(2) + ' Mbps';
+                systemReportData['InternetUpload'] = uploadMbps.toFixed(2) + ' Mbps';
+                systemReportData['InternetPing'] = avgPing.toFixed(0) + ' ms';
+                systemReportData['InternetJitter'] = jitter.toFixed(1) + ' ms';
+            } catch (error) {
+                status.textContent = 'تست کامل نشد؛ ممکن است سرور تست در دسترس نباشد یا شبکه درخواست را مسدود کرده باشد.';
+                [downEl, upEl, pingEl, jitterEl].forEach(el => { if (el.textContent === '…') el.textContent = '—'; });
+            } finally {
+                button.disabled = false;
+                button.textContent = 'اجرای دوباره تست';
             }
         }
 
