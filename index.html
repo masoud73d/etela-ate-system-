@@ -516,11 +516,29 @@
             return `<span ${titleAttr} class="inline-block px-2 py-0.5 rounded text-[11px] font-semibold whitespace-normal max-w-full leading-tight align-middle ${colors}">${text}</span>`;
         }
 
-        // Device code -> commercial name database (Google Play supported-device mappings)
+        // Device code -> commercial name database.
+        // The local aliases guarantee recognition of frequently reported Xiaomi identifiers
+        // even when the remote catalogue is unavailable or its CDN is blocked.
         let deviceDatabasePromise = null;
+        let normalizedDeviceDatabase = null;
 
         function normalizeDeviceCode(value) {
             return String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+        }
+
+        function getLocalDeviceMatch(value) {
+            const raw = String(value || '').trim();
+            const normalized = normalizeDeviceCode(raw);
+            const aliases = {
+                '2312DRA50G': { name: 'Redmi Note 13 Pro 5G', brand: 'Xiaomi (شیائومی)' },
+                '2312DRA50C': { name: 'Redmi Note 13 Pro 5G (نسخه چین)', brand: 'Xiaomi (شیائومی)' }
+            };
+
+            if (aliases[normalized]) return aliases[normalized];
+
+            // Some browsers prepend the manufacturer to the model identifier.
+            const codeMatch = raw.toUpperCase().match(/2312DRA50[GC]/);
+            return codeMatch ? aliases[codeMatch[0]] : null;
         }
 
         async function getDeviceDatabase() {
@@ -538,28 +556,28 @@
         async function findCommercialDevice(modelCode) {
             const code = String(modelCode || '').trim();
             const normalized = normalizeDeviceCode(code);
+            if (!normalized) return null;
 
-            // Local fallback for devices commonly reported by browsers.
-            const localDevices = {
-                '2312DRA50G': { name: 'Redmi Note 13 Pro 5G', brand: 'Xiaomi' }
-            };
-            if (localDevices[normalized]) return localDevices[normalized];
+            const localMatch = getLocalDeviceMatch(code);
+            if (localMatch) return localMatch;
 
             const database = await getDeviceDatabase();
             if (!database || typeof database !== 'object') return null;
 
             if (database[code] && database[code].name) return database[code];
 
-            // Normalize keys because manufacturers use different separators/capitalization.
-            if (!window.__normalizedDeviceDatabase) {
-                const index = Object.create(null);
+            // Build the normalized index only once to support code formatting variations.
+            if (!normalizedDeviceDatabase) {
+                normalizedDeviceDatabase = Object.create(null);
                 Object.keys(database).forEach(key => {
+                    const item = database[key];
                     const normalizedKey = normalizeDeviceCode(key);
-                    if (normalizedKey && !index[normalizedKey]) index[normalizedKey] = database[key];
+                    if (normalizedKey && item && item.name && !normalizedDeviceDatabase[normalizedKey]) {
+                        normalizedDeviceDatabase[normalizedKey] = item;
+                    }
                 });
-                window.__normalizedDeviceDatabase = index;
             }
-            return window.__normalizedDeviceDatabase[normalized] || null;
+            return normalizedDeviceDatabase[normalized] || null;
         }
 
         // 1. Device Model & Brand Extraction Logic
@@ -582,7 +600,7 @@
                 } catch (e) {}
             }
 
-            // UserAgent Regex Parsing fallback for specific phone models
+            // Read a model from User-Agent only when Client Hints did not provide one.
             if (model === 'نامشخص' || model === '') {
                 if (/iPhone/i.test(ua)) {
                     brand = 'Apple (اپل)';
@@ -594,28 +612,36 @@
                     const androidMatch = ua.match(/Android\s([0-9.]+)/);
                     if (androidMatch) os = 'اندروید ' + androidMatch[1];
 
-                    // Android browsers may expose a hardware code instead of the marketing name.
-                    const modelMatch = ua.match(/;\s?([^;]+?)\s?(Build|Build\/|\))/i);
-                    if (modelMatch && modelMatch[1]) model = modelMatch[1].trim();
+                    // Prefer a recognizable hardware model code, even if the UA contains
+                    // extra manufacturer/build text around it.
+                    const knownCode = ua.match(/2312DRA50[GC]/i);
+                    const modelMatch = ua.match(/;\s?([^;]+?)\s?(?:Build(?:\/|\s)|\))/i);
+                    if (knownCode) model = knownCode[0].toUpperCase();
+                    else if (modelMatch && modelMatch[1]) model = modelMatch[1].trim();
                 }
             }
 
-            // Resolve hardware identifier to a consumer-friendly commercial name.
-            const originalModelCode = String(model).trim();
+            // Normalize common prefixes such as "Xiaomi " before resolving the code.
+            const rawModelValue = String(model).trim();
+            const embeddedKnownCode = rawModelValue.match(/2312DRA50[GC]/i);
+            const originalModelCode = embeddedKnownCode ? embeddedKnownCode[0].toUpperCase() : rawModelValue;
             const matchedDevice = await findCommercialDevice(originalModelCode);
+
             if (matchedDevice && matchedDevice.name) {
                 model = matchedDevice.name;
                 if (originalModelCode && normalizeDeviceCode(originalModelCode) !== normalizeDeviceCode(matchedDevice.name)) {
                     model += ` (${originalModelCode})`;
                 }
                 if (matchedDevice.brand) brand = matchedDevice.brand;
+            } else if (rawModelValue !== originalModelCode && rawModelValue) {
+                model = rawModelValue;
             }
 
             // Brand inference fallback when the database has no match.
             const brandModel = String(model).toLowerCase();
             if (brand === 'نامشخص' || brand === 'Android (اندروید)' || brand === 'Android') {
                 if (/^sm[-_]/i.test(originalModelCode)) brand = 'Samsung (سامسونگ)';
-                else if (/redmi|poco|\\bmi\\b|2312dra/i.test(brandModel + ' ' + originalModelCode)) brand = 'Xiaomi (شیائومی)';
+                else if (/redmi|poco|\bmi\b|2312dra|xiaomi/i.test(brandModel + ' ' + originalModelCode)) brand = 'Xiaomi (شیائومی)';
                 else if (/pixel/i.test(brandModel)) brand = 'Google (گوگل پکسل)';
                 else if (/cph|oppo/i.test(brandModel + ' ' + originalModelCode)) brand = 'OPPO (اوپو)';
                 else if (/v[0-9]{4}|vivo/i.test(brandModel + ' ' + originalModelCode)) brand = 'Vivo (ویوو)';
