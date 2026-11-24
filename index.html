@@ -506,7 +506,6 @@
                     <div class="rounded-xl bg-slate-100 dark:bg-slate-900/70 p-3 text-center"><div class="text-[10px] text-slate-500">دانلود</div><div id="speed-download" class="text-lg font-black dir-ltr">—</div><div class="text-[10px] text-slate-500">Mbps</div></div>
                     <div class="rounded-xl bg-slate-100 dark:bg-slate-900/70 p-3 text-center"><div class="text-[10px] text-slate-500">آپلود</div><div id="speed-upload" class="text-lg font-black dir-ltr">—</div><div class="text-[10px] text-slate-500">Mbps</div></div>
                     <div class="rounded-xl bg-slate-100 dark:bg-slate-900/70 p-3 text-center"><div class="text-[10px] text-slate-500">پینگ</div><div id="speed-ping" class="text-lg font-black dir-ltr">—</div><div class="text-[10px] text-slate-500">ms</div></div>
-                    <div class="rounded-xl bg-slate-100 dark:bg-slate-900/70 p-3 text-center"><div class="text-[10px] text-slate-500">نوسانات پینگ</div><div id="speed-jitter" class="text-lg font-black dir-ltr">—</div><div class="text-[10px] text-slate-500">ms</div></div>
                 </div>
                 <p id="speed-test-status" class="text-[11px] text-slate-500 dark:text-slate-400 text-center mb-3">برای شروع، دکمه زیر را بزنید. تست به اینترنت نیاز دارد.</p>
                 <button id="speed-test-button" onclick="runInternetSpeedTest()" class="w-full py-2.5 px-3 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold transition-all shadow-md active:scale-95">شروع تست سرعت</button>
@@ -858,14 +857,17 @@
                 const nativeInfo = readNativeDeviceInfo(true) || {};
                 const modelHints = [
                     nativeInfo.model, nativeInfo.device, nativeInfo.product,
+                    nativeInfo.hardware, nativeInfo.brand, nativeInfo.manufacturer,
                     navigator.userAgent || ''
-                ].join(' ').toUpperCase();
+                ].filter(Boolean).join(' ').toUpperCase()
+                    .replace(/[._-]+/g, ' ').replace(/\\s+/g, ' ').trim();
 
-                // Official specification for Redmi Note 13 Pro 5G, model family 2312DRA50.
+                // Verified manufacturer profile for Redmi Note 13 Pro 5G.
+                // Match both Xiaomi's hardware model code and Android's marketing name.
                 const isRedmiNote13Pro5G =
-                    modelHints.includes('2312DRA50G') ||
-                    modelHints.includes('2312DRA50C') ||
-                    modelHints.includes('REDMI NOTE 13 PRO 5G');
+                    /2312DRA50[GC]/.test(modelHints.replace(/\\s/g, '')) ||
+                    modelHints.includes('REDMI NOTE 13 PRO 5G') ||
+                    (modelHints.includes('REDMI') && modelHints.includes('NOTE 13 PRO') && modelHints.includes('5G'));
 
                 if (isRedmiNote13Pro5G) {
                     const verifiedCameras = [
@@ -1184,11 +1186,9 @@
             const downEl = document.getElementById('speed-download');
             const upEl = document.getElementById('speed-upload');
             const pingEl = document.getElementById('speed-ping');
-            const jitterEl = document.getElementById('speed-jitter');
             if (!navigator.onLine) { status.textContent = 'اتصال اینترنت برقرار نیست.'; return; }
             button.disabled = true;
             button.textContent = 'در حال انجام تست...';
-            [downEl, upEl, pingEl, jitterEl].forEach(el => el.textContent = '…');
             const base = 'https://speed.cloudflare.com';
             const timedFetch = async (url, options = {}) => {
                 const controller = new AbortController();
@@ -1209,9 +1209,7 @@
                     pings.push(result.ms);
                 }
                 const avgPing = pings.reduce((a,b)=>a+b,0) / pings.length;
-                const jitter = pings.slice(1).reduce((sum,v,i)=>sum+Math.abs(v-pings[i]),0) / (pings.length-1);
                 pingEl.textContent = avgPing.toFixed(0);
-                jitterEl.textContent = jitter.toFixed(1);
 
                 status.textContent = 'در حال اندازه‌گیری سرعت دانلود...';
                 const downBytes = 8000000;
@@ -1232,10 +1230,8 @@
                 systemReportData['InternetDownload'] = downloadMbps.toFixed(2) + ' Mbps';
                 systemReportData['InternetUpload'] = uploadMbps.toFixed(2) + ' Mbps';
                 systemReportData['InternetPing'] = avgPing.toFixed(0) + ' ms';
-                systemReportData['InternetJitter'] = jitter.toFixed(1) + ' ms';
             } catch (error) {
                 status.textContent = 'تست کامل نشد؛ ممکن است سرور تست در دسترس نباشد یا شبکه درخواست را مسدود کرده باشد.';
-                [downEl, upEl, pingEl, jitterEl].forEach(el => { if (el.textContent === '…') el.textContent = '—'; });
             } finally {
                 button.disabled = false;
                 button.textContent = 'اجرای دوباره تست';
@@ -1273,7 +1269,6 @@
             txt += `🌐 دانلود اینترنت: ${systemReportData['InternetDownload'] || 'هنوز تست نشده'}\n`;
             txt += `🌐 آپلود اینترنت: ${systemReportData['InternetUpload'] || 'هنوز تست نشده'}\n`;
             txt += `📶 پینگ: ${systemReportData['InternetPing'] || 'هنوز تست نشده'}\n`;
-            txt += `📉 نوسانات پینگ: ${systemReportData['InternetJitter'] || 'هنوز تست نشده'}\n`;
             txt += `🖥️ رزولوشن فیزیکی: ${document.getElementById('screen-physical').textContent}\n`;
             txt += `🌐 وضعیت شبکه: ${navigator.onLine ? 'آنلاین' : 'آفلاین'}\n`;
             txt += `\nتاریخ ثبت گزارش: ${new Date().toLocaleString('fa-IR')}`;
