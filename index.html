@@ -554,8 +554,21 @@
                 }
             }
 
-            // Further refine brand name if contained in model code
-            if (model.toUpperCase().startsWith('SM-')) brand = 'Samsung (سامسونگ)';
+            // Convert recognized hardware identifiers into familiar commercial model names.
+            // Keep the original identifier visible beside the friendly name for verification.
+            const normalizedModel = String(model).trim().toUpperCase().replace(/[\\s_-]/g, '');
+            const knownDeviceModels = {
+                '2312DRA50G': {
+                    name: 'Redmi Note 13 Pro 5G',
+                    brand: 'Xiaomi (شیائومی)'
+                }
+            };
+            const matchedDevice = knownDeviceModels[normalizedModel];
+
+            if (matchedDevice) {
+                model = `${matchedDevice.name} (${String(model).trim()})`;
+                brand = matchedDevice.brand;
+            } else if (model.toUpperCase().startsWith('SM-')) brand = 'Samsung (سامسونگ)';
             else if (model.toLowerCase().includes('redmi') || model.toLowerCase().includes('poco') || model.toLowerCase().includes('mi ')) brand = 'Xiaomi (شیائومی)';
             else if (model.toLowerCase().includes('pixel')) brand = 'Google (گوگل پکسل)';
             else if (model.toLowerCase().includes('cph') || model.toLowerCase().includes('oppo')) brand = 'OPPO (اوپو)';
