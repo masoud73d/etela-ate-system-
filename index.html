@@ -471,6 +471,10 @@
                         </colgroup>
                         <tbody>
                             <tr class="table-row-custom even:bg-slate-50/50 dark:even:bg-slate-900/30">
+                                <td class="text-slate-500 dark:text-slate-400 font-medium">ظرفیت اسمی باتری:</td>
+                                <td id="battery-capacity" class="font-semibold text-slate-800 dark:text-slate-200 text-left dir-ltr">در حال شناسایی...</td>
+                            </tr>
+                            <tr class="table-row-custom even:bg-slate-50/50 dark:even:bg-slate-900/30">
                                 <td class="text-slate-500 dark:text-slate-400 font-medium">اتصال اینترنت:</td>
                                 <td id="online-status" class="font-semibold text-left">--</td>
                             </tr>
@@ -654,6 +658,7 @@
 
             document.getElementById('phone-model-val').textContent = model;
             document.getElementById('phone-brand-val').textContent = brand;
+            updateBatteryCapacity(model, originalModelCode);
             if (os !== 'نامشخص') document.getElementById('os-info').textContent = os;
 
             systemReportData['PhoneModel'] = model;
@@ -923,6 +928,28 @@
             document.getElementById('screen-orientation').textContent = isPortrait ? 'عمودی (Portrait)' : 'افقی (Landscape)';
         }
 
+        // Battery capacity is a model specification, not a live battery reading.
+        // Add verified model codes here as additional devices are tested.
+        function updateBatteryCapacity(model, modelCode) {
+            const capacityEl = document.getElementById('battery-capacity');
+            if (!capacityEl) return;
+
+            const code = String(modelCode || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+            const name = String(model || '').toLowerCase();
+
+            const knownCapacities = {
+                '2312DRA50G': 5100,
+                '2312DRA50C': 5100
+            };
+
+            let capacity = knownCapacities[code] || null;
+            if (!capacity && /redmi note 13 pro 5g/.test(name)) capacity = 5100;
+
+            capacityEl.textContent = capacity
+                ? `${capacity.toLocaleString('en-US')} mAh`
+                : 'برای این مدل ثبت نشده';
+        }
+
         // 6. Battery, Storage & Network
         function loadBatteryStorageNetwork() {
             // Online status
@@ -974,7 +1001,10 @@
                     badgeEl.textContent = 'عدم دسترسی مرورگر به باتری';
                 });
             } else {
-                badgeEl.textContent = 'توسط مرورگر پشتیبانی نمی‌شود';
+                percentEl.textContent = '--%';
+                bar.style.width = '0%';
+                badgeEl.textContent = 'در این مرورگر امکان خواندن درصد شارژ وجود ندارد';
+                badgeEl.title = 'مرورگر این دستگاه رابط Battery Status API را ارائه نمی‌کند.';
             }
         }
 
@@ -1004,6 +1034,7 @@
             txt += `⚡ تراشه (SoC): ${document.getElementById('inferred-chipset').textContent}\n`;
             txt += `🎮 مدل گرافیک (GPU): ${document.getElementById('gpu-renderer').textContent}\n`;
             txt += `🧠 هسته‌های CPU: ${document.getElementById('cpu-cores').textContent}\n`;
+            txt += `🔋 ظرفیت اسمی باتری: ${document.getElementById('battery-capacity').textContent}\n`;
             txt += `🔋 درصد شارژ باتری: ${document.getElementById('battery-percentage').textContent}\n`;
             txt += `🖥️ رزولوشن فیزیکی: ${document.getElementById('screen-physical').textContent}\n`;
             txt += `🌐 وضعیت شبکه: ${navigator.onLine ? 'آنلاین' : 'آفلاین'}\n`;
