@@ -118,7 +118,7 @@
                             در حال آنالیز...
                         </span>
                     </div>
-                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">شناسایی مدل گوشی، تراشه، سنسورها و لنزهای دوربین</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">شناسایی مدل گوشی، تراشه و سنسورها</p>
                 </div>
             </div>
 
@@ -257,53 +257,6 @@
                             </tr>
                         </tbody>
                     </table>
-                </div>
-            </section>
-
-            <!-- 3. Cameras & Lens Details Card -->
-            <section class="glass-card rounded-2xl p-3.5 sm:p-4 shadow-sm w-full">
-                <div class="flex items-center gap-2.5 pb-2.5 mb-2.5 border-b border-slate-200 dark:border-slate-800">
-                    <div class="p-2 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex-shrink-0">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                        </svg>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <h2 class="font-bold text-slate-900 dark:text-slate-100 text-sm truncate">دوربین‌ها و لنزهای گوشی</h2>
-                        <span class="text-[11px] text-slate-500 dark:text-slate-400">بررسی تفکیک‌پذیری و زوم</span>
-                    </div>
-                </div>
-
-                <div class="mb-2.5">
-                    <button id="scan-cam-btn" onclick="scanCamerasDetailed()" class="w-full py-2 px-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all shadow-md shadow-rose-600/20 active:scale-95 flex items-center justify-center gap-1.5">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                        </svg>
-                        <span>اسکن دقیق لنزها و مگاپیکسل (نیاز به مجوز)</span>
-                    </button>
-                </div>
-
-                <div class="overflow-hidden rounded-xl border border-slate-200/80 dark:border-slate-800/80 w-full mb-2">
-                    <table class="sys-table text-xs text-right">
-                        <colgroup>
-                            <col class="col-title">
-                            <col class="col-value">
-                        </colgroup>
-                        <tbody>
-                            <tr class="table-row-custom even:bg-slate-50/50 dark:even:bg-slate-900/30">
-                                <td class="text-slate-500 dark:text-slate-400 font-medium">تعداد کل ورودی‌ها:</td>
-                                <td id="media-counts" class="font-semibold text-slate-800 dark:text-slate-200 text-left dir-ltr">--</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- Container for Scanned Lenses -->
-                <div id="camera-lenses-container" class="space-y-2">
-                    <p class="text-[11px] text-slate-500 dark:text-slate-400 text-center py-2 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-slate-200/50 dark:border-slate-800/50">
-                        با اسکن، فقط مشخصاتی نمایش داده می‌شود که سیستم اندروید مستقیماً از سخت‌افزار دوربین گزارش کند.
-                    </p>
                 </div>
             </section>
 
@@ -844,71 +797,6 @@
                 : (navigator.deviceMemory ? `حدود ${navigator.deviceMemory} GB` : 'محدود در مرورگر');
         }
 
-        // Camera specifications are read only from the Android Camera2 bridge.
-        // A browser cannot expose physical camera sensor specifications.
-        function scanCamerasDetailed() {
-            const btn = document.getElementById('scan-cam-btn');
-            const container = document.getElementById('camera-lenses-container');
-            btn.disabled = true;
-            btn.textContent = 'در حال خواندن اطلاعات دوربین‌ها...';
-            container.innerHTML = '';
-            try {
-                if (!window.AndroidApp || typeof AndroidApp.getCameraHardwareInfo !== 'function') {
-                    container.innerHTML = '<p class="text-xs text-amber-600 dark:text-amber-400 text-center p-3">خواندن مشخصات واقعی سنسورهای دوربین فقط از طریق Camera2 در نسخه اندروید امکان‌پذیر است؛ مرورگر وب این اطلاعات سخت‌افزاری را ارائه نمی‌کند.</p>';
-                    document.getElementById('media-counts').textContent = 'خواندن سخت‌افزاری دوربین در مرورگر پشتیبانی نمی‌شود';
-                    btn.textContent = 'نیازمند نسخه اندروید';
-                    return;
-                }
-                const cameras = JSON.parse(AndroidApp.getCameraHardwareInfo() || '[]');
-                if (!Array.isArray(cameras) || !cameras.length) {
-                    container.innerHTML = '<p class="text-xs text-amber-600 dark:text-amber-400 text-center p-3">سیستم اندروید اطلاعات دوربین قابل‌خواندنی از Camera2 ارائه نکرد.</p>';
-                    document.getElementById('media-counts').textContent = 'اطلاعات دوربین در دسترس نیست';
-                    btn.textContent = 'تلاش مجدد';
-                    return;
-                }
-                const logical = cameras.filter(c => !c.physical);
-                const physical = cameras.filter(c => c.physical);
-                const esc = v => String(v ?? '—').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
-                const render = (cam, index, isPhysical) => {
-                    const width = Number(cam.width) || 0, height = Number(cam.height) || 0;
-                    const mp = Number(cam.megapixels) || (width && height ? width * height / 1e6 : 0);
-                    const facing = cam.facing === 1 ? 'جلو' : cam.facing === 0 ? 'پشت' : 'نامشخص';
-                    const focal = Array.isArray(cam.focalLengthsMm) && cam.focalLengthsMm.length ? cam.focalLengthsMm.join(' / ') + ' mm' : 'اعلام نشده';
-                    const sensor = cam.sensorWidthMm && cam.sensorHeightMm ? cam.sensorWidthMm + ' × ' + cam.sensorHeightMm + ' mm' : 'اعلام نشده';
-                    const title = isPhysical ? 'سنسور فیزیکی ' + (index + 1) : (cam.facing === 1 ? 'دوربین جلویی' : cam.facing === 0 ? 'دوربین پشتی' : 'دوربین');
-                    container.insertAdjacentHTML('beforeend', `
-                      <div class="p-3 rounded-xl bg-slate-100 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 text-right">
-                        <div class="font-bold text-xs text-rose-600 dark:text-rose-400 mb-2">${title} — ${facing}</div>
-                        <table class="sys-table text-xs"><tbody>
-                          <tr class="table-row-custom"><td class="text-slate-500">شناسه دوربین:</td><td class="font-semibold text-left dir-ltr">${esc(cam.id)}</td></tr>
-                          <tr class="table-row-custom"><td class="text-slate-500">وضوح آرایه پیکسلی:</td><td class="font-semibold text-left dir-ltr">${width && height ? width + ' × ' + height + ' px' : 'اعلام نشده'}</td></tr>
-                          <tr class="table-row-custom"><td class="text-slate-500">مگاپیکسل محاسبه‌شده:</td><td class="font-semibold text-left dir-ltr">${mp ? mp.toFixed(1) + ' MP' : 'اعلام نشده'}</td></tr>
-                          <tr class="table-row-custom"><td class="text-slate-500">فاصله کانونی:</td><td class="font-semibold text-left dir-ltr">${esc(focal)}</td></tr>
-                          <tr class="table-row-custom"><td class="text-slate-500">ابعاد سنسور:</td><td class="font-semibold text-left dir-ltr">${esc(sensor)}</td></tr>
-                        </tbody></table>
-                        <div class="text-[10px] text-slate-400 mt-1">${isPhysical ? 'شناسه سنسور فیزیکی اعلام‌شده توسط سازنده' : 'داده دوربین منطقی گزارش‌شده توسط Camera2'}</div>
-                      </div>`);
-                };
-                logical.forEach((c,i)=>render(c,i,false));
-                if (physical.length) {
-                    container.insertAdjacentHTML('beforeend','<p class="text-xs font-bold text-slate-600 dark:text-slate-300 text-right mt-3">سنسورهای فیزیکی گزارش‌شده</p>');
-                    physical.forEach((c,i)=>render(c,i,true));
-                } else {
-                    container.insertAdjacentHTML('beforeend','<p class="text-[11px] text-slate-500 dark:text-slate-400 text-center p-2">سازنده شناسه سنسورهای فیزیکی جداگانه را در اختیار Camera2 نگذاشته است؛ فقط اطلاعاتی نمایش داده می‌شود که خود سیستم گزارش کرده.</p>');
-                }
-                document.getElementById('media-counts').textContent = logical.length + ' دوربین منطقی · ' + physical.length + ' سنسور فیزیکی';
-                btn.textContent = '✓ اطلاعات دوربین خوانده شد (خواندن مجدد)';
-            } catch (err) {
-                container.innerHTML = '<p class="text-xs text-rose-500 text-center">خواندن اطلاعات دوربین ناموفق بود: ' + escCameraError(err) + '</p>';
-                btn.textContent = 'تلاش مجدد';
-            } finally {
-                btn.disabled = false;
-            }
-        }
-        function escCameraError(err) {
-            return String(err?.message || 'خطای دسترسی').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
-        }
-
         // 4. Sensors & Hardware Probing
         function requestSensorPermissions() {
             if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
@@ -1256,16 +1144,6 @@
         }
         if (localStorage.getItem('sys_theme') === 'light') {
             document.documentElement.classList.remove('dark');
-        }
-
-        // Media count passive check
-        if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
-            navigator.mediaDevices.enumerateDevices().then(devs => {
-                const cams = devs.filter(d => d.kind === 'videoinput').length;
-                const mics = devs.filter(d => d.kind === 'audioinput').length;
-                const spks = devs.filter(d => d.kind === 'audiooutput').length;
-                document.getElementById('media-counts').textContent = `دوربین:${cams} | میکروفون:${mics} | بلندگو:${spks}`;
-            }).catch(() => {});
         }
 
         // Event Listeners
