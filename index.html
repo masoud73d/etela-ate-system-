@@ -503,6 +503,43 @@
     <!-- JavaScript Core logic -->
     <script>
         const systemReportData = {};
+        let nativeDeviceInfoCache = null;
+
+        // Native Android information is supplied by the APK's read-only JavaScript bridge.
+        function readNativeDeviceInfo(refresh = false) {
+            if (!refresh && nativeDeviceInfoCache) return nativeDeviceInfoCache;
+            try {
+                if (!window.AndroidApp || typeof window.AndroidApp.getNativeDeviceInfo !== 'function') return null;
+                const raw = window.AndroidApp.getNativeDeviceInfo();
+                const info = JSON.parse(raw || '{}');
+                if (info && info.nativeSource === 'Android') {
+                    nativeDeviceInfoCache = info;
+                    return info;
+                }
+            } catch (e) {}
+            return null;
+        }
+
+        function updateBatteryVisual(level, status, plugged) {
+            const bar = document.getElementById('battery-bar');
+            const percentEl = document.getElementById('battery-percentage');
+            const badgeEl = document.getElementById('battery-charging-badge');
+            if (!bar || !percentEl || !badgeEl || !Number.isFinite(level) || level < 0) return;
+
+            const safeLevel = Math.max(0, Math.min(100, Math.round(level)));
+            percentEl.textContent = safeLevel + '%';
+            bar.style.width = safeLevel + '%';
+
+            if (safeLevel <= 20) bar.className = 'battery-bar-anim h-full rounded bg-rose-500';
+            else if (safeLevel <= 50) bar.className = 'battery-bar-anim h-full rounded bg-amber-500';
+            else bar.className = 'battery-bar-anim h-full rounded bg-emerald-500';
+
+            if (status === 'charging') badgeEl.textContent = '⚡ در حال شارژ';
+            else if (status === 'full') badgeEl.textContent = 'باتری کاملاً شارژ شده';
+            else if (status === 'not_charging') badgeEl.textContent = 'به شارژر متصل، بدون شارژ';
+            else if (plugged && plugged !== 'none') badgeEl.textContent = 'به برق متصل';
+            else badgeEl.textContent = 'در حال مصرف انرژی';
+        }
 
         // Helper: Styled Flexible Badge
         function makeBadge(text, type, title = '') {
@@ -591,8 +628,33 @@
             let brand = 'نامشخص';
             let os = 'نامشخص';
 
-            // High Entropy User Agent Data API (Modern Chrome / Android)
-            if (navigator.userAgentData && navigator.userAgentData.getHighEntropyValues) {
+            const nativeInfo = readNativeDeviceInfo(true);
+
+            if (nativeInfo) {
+                model = nativeInfo.model || model;
+                const nativeBrand = String(nativeInfo.brand || nativeInfo.manufacturer || '').trim();
+                if (/xiaomi|redmi|poco/i.test(nativeBrand)) brand = 'Xiaomi (شیائومی)';
+                else if (/samsung/i.test(nativeBrand)) brand = 'Samsung (سامسونگ)';
+                else if (/google/i.test(nativeBrand)) brand = 'Google (گوگل)';
+                else if (nativeBrand) brand = nativeBrand;
+
+                if (nativeInfo.androidVersion) {
+                    os = 'اندروید ' + nativeInfo.androidVersion;
+                    if (nativeInfo.romVersion) {
+                        const rom = String(nativeInfo.romVersion).trim();
+                        if (/^OS/i.test(rom)) os += ' · HyperOS ' + rom;
+                        else if (/^V[0-9]/i.test(rom)) os += ' · MIUI ' + rom;
+                        else os += ' · نسخه رام ' + rom;
+                    }
+                }
+
+                if (nativeInfo.supportedAbis) {
+                    document.getElementById('arch-info').textContent = nativeInfo.supportedAbis + ' (معماری واقعی دستگاه)';
+                }
+            }
+
+            // High Entropy User Agent Data API (browser fallback only).
+            if (!nativeInfo && navigator.userAgentData && navigator.userAgentData.getHighEntropyValues) {
                 try {
                     const uad = await navigator.userAgentData.getHighEntropyValues(['model', 'platform', 'platformVersion', 'architecture', 'bitness']);
                     if (uad.model) model = uad.model;
@@ -683,6 +745,19 @@
                 document.getElementById('arch-info').textContent = ua.includes('x86_64') ? 'x86_64 (64-bit)' : 'ARM64 / Mobile';
             }
 
+            if (nativeInfo) {
+                if (nativeInfo.cpuCores > 0) {
+                    document.getElementById('cpu-cores').textContent = nativeInfo.cpuCores + ' هسته (اندروید)';
+                }
+                if (nativeInfo.totalRamBytes > 0) {
+                    const ramGb = nativeInfo.totalRamBytes / (1024 * 1024 * 1024);
+                    document.getElementById('device-ram').textContent = ramGb.toFixed(1) + ' GB (واقعی)';
+                }
+                systemReportData['AndroidVersion'] = os;
+                systemReportData['AndroidBuild'] = nativeInfo.buildNumber || nativeInfo.display || 'نامشخص';
+                systemReportData['CPUArchitecture'] = nativeInfo.supportedAbis || 'نامشخص';
+            }
+
             document.getElementById('touch-points').textContent = `${navigator.maxTouchPoints || 0} نقطه`;
             document.getElementById('timezone-info').textContent = Intl.DateTimeFormat().resolvedOptions().timeZone || 'نامشخص';
 
@@ -743,8 +818,13 @@
                 document.getElementById('inferred-chipset').textContent = 'محدودیت WebGL';
             }
 
-            document.getElementById('cpu-cores').textContent = `${navigator.hardwareConcurrency || 'نامشخص'} هسته`;
-            document.getElementById('device-ram').textContent = navigator.deviceMemory ? `حدود ${navigator.deviceMemory} GB` : 'محدود در مرورگر';
+            const nativeInfo = readNativeDeviceInfo();
+            document.getElementById('cpu-cores').textContent = nativeInfo && nativeInfo.cpuCores > 0
+                ? nativeInfo.cpuCores + ' هسته (اندروید)'
+                : `${navigator.hardwareConcurrency || 'نامشخص'} هسته`;
+            document.getElementById('device-ram').textContent = nativeInfo && nativeInfo.totalRamBytes > 0
+                ? (nativeInfo.totalRamBytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB (واقعی)'
+                : (navigator.deviceMemory ? `حدود ${navigator.deviceMemory} GB` : 'محدود در مرورگر');
         }
 
         // 3. Detailed Camera & Lens Scanning (With Permissions & Capabilities)
@@ -975,8 +1055,14 @@
                 document.getElementById('net-downlink').textContent = 'محدود در مرورگر';
             }
 
-            // Storage estimate
-            if (navigator.storage && navigator.storage.estimate) {
+            // Prefer the device's real storage figures in the Android app.
+            const nativeInfo = readNativeDeviceInfo(true);
+            if (nativeInfo && nativeInfo.totalStorageBytes > 0) {
+                const totalGb = nativeInfo.totalStorageBytes / (1024 * 1024 * 1024);
+                const freeGb = (nativeInfo.availableStorageBytes || 0) / (1024 * 1024 * 1024);
+                document.getElementById('storage-quota-txt').textContent =
+                    (totalGb - freeGb).toFixed(1) + ' GB استفاده‌شده از ' + totalGb.toFixed(1) + ' GB';
+            } else if (navigator.storage && navigator.storage.estimate) {
                 navigator.storage.estimate().then(est => {
                     const usedMB = (est.usage / (1024 * 1024)).toFixed(1);
                     const quotaGB = (est.quota / (1024 * 1024 * 1024)).toFixed(1);
@@ -988,35 +1074,36 @@
                 document.getElementById('storage-quota-txt').textContent = 'غیرفعال';
             }
 
-            // Battery
-            const bar = document.getElementById('battery-bar');
-            const percentEl = document.getElementById('battery-percentage');
-            const badgeEl = document.getElementById('battery-charging-badge');
-
-            if ('getBattery' in navigator) {
+            // Prefer live battery information from Android; use the browser API only on the web.
+            const nativeBatteryInfo = readNativeDeviceInfo(true);
+            if (nativeBatteryInfo && Number(nativeBatteryInfo.batteryPercent) >= 0) {
+                const updateNativeBattery = () => {
+                    const latest = readNativeDeviceInfo(true) || nativeBatteryInfo;
+                    updateBatteryVisual(Number(latest.batteryPercent), latest.batteryStatus, latest.batteryPlugged);
+                    systemReportData['BatteryPercent'] = latest.batteryPercent + '%';
+                    systemReportData['BatteryStatus'] = latest.batteryStatus || 'نامشخص';
+                };
+                updateNativeBattery();
+                if (!window.nativeBatteryRefreshTimer) {
+                    window.nativeBatteryRefreshTimer = setInterval(updateNativeBattery, 30000);
+                }
+            } else if ('getBattery' in navigator) {
                 navigator.getBattery().then(battery => {
                     function update() {
-                        const level = Math.round(battery.level * 100);
-                        percentEl.textContent = `${level}%`;
-                        bar.style.width = `${level}%`;
-
-                        if (level <= 20) bar.className = 'battery-bar-anim h-full rounded bg-rose-500';
-                        else if (level <= 50) bar.className = 'battery-bar-anim h-full rounded bg-amber-500';
-                        else bar.className = 'battery-bar-anim h-full rounded bg-emerald-500';
-
-                        badgeEl.textContent = battery.charging ? '⚡ متصل به شارژر' : 'در حال مصرف انرژی';
+                        updateBatteryVisual(Math.round(battery.level * 100),
+                            battery.charging ? 'charging' : 'discharging', 'none');
                     }
                     update();
                     battery.addEventListener('levelchange', update);
                     battery.addEventListener('chargingchange', update);
                 }).catch(() => {
-                    badgeEl.textContent = 'عدم دسترسی مرورگر به باتری';
+                    document.getElementById('battery-charging-badge').textContent = 'عدم دسترسی مرورگر به باتری';
                 });
             } else {
-                percentEl.textContent = '--%';
-                bar.style.width = '0%';
-                badgeEl.textContent = 'در این مرورگر امکان خواندن درصد شارژ وجود ندارد';
-                badgeEl.title = 'مرورگر این دستگاه رابط Battery Status API را ارائه نمی‌کند.';
+                document.getElementById('battery-percentage').textContent = '--%';
+                document.getElementById('battery-bar').style.width = '0%';
+                document.getElementById('battery-charging-badge').textContent = 'در این مرورگر امکان خواندن درصد شارژ وجود ندارد';
+                document.getElementById('battery-charging-badge').title = 'مرورگر این دستگاه رابط Battery Status API را ارائه نمی‌کند.';
             }
         }
 
