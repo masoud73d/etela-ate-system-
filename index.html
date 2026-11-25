@@ -865,9 +865,50 @@
             // Magnetometer / Compass heading
             document.getElementById('mag-status').innerHTML = ('Magnetometer' in window || 'ondeviceorientationabsolute' in window) ? makeBadge('فعال / قطب‌نما', 'success') : makeBadge('محدود در مرورگر', 'info');
 
-            // Ambient Light & Proximity
-            document.getElementById('light-status').innerHTML = ('AmbientLightSensor' in window) ? makeBadge('پشتیبانی می‌شود', 'success') : makeBadge('محدود شده', 'info');
-            document.getElementById('proximity-status').innerHTML = ('ProximitySensor' in window || 'ondeviceproximity' in window) ? makeBadge('پشتیبانی می‌شود', 'success') : makeBadge('محدود شده', 'info');
+            // Android WebView does not expose AmbientLightSensor/ProximitySensor
+            // consistently. Ask the native SensorManager bridge for real hardware data.
+            const nativeInfo = readNativeDeviceInfo(true);
+            const nativeSensors = nativeInfo && Array.isArray(nativeInfo.sensors)
+                ? nativeInfo.sensors : null;
+
+            function showHardwareSensorStatus(elementId, nativeFlag, nativeName, sensorType, browserApiAvailable, label) {
+                const element = document.getElementById(elementId);
+                let detected = typeof nativeFlag === 'boolean' ? nativeFlag : null;
+                let name = nativeName || '';
+
+                if (detected === null && nativeSensors) {
+                    const match = nativeSensors.find(sensor => Number(sensor.type) === sensorType);
+                    detected = !!match;
+                    if (match && match.name) name = match.name;
+                }
+
+                if (detected === true) {
+                    element.innerHTML = makeBadge('شناسایی شد', 'success', name || label);
+                } else if (detected === false) {
+                    element.innerHTML = makeBadge('در سخت‌افزار شناسایی نشد', 'warning');
+                } else if (browserApiAvailable) {
+                    element.innerHTML = makeBadge(label + ' (پشتیبانی مرورگر)', 'success');
+                } else {
+                    element.innerHTML = makeBadge('اطلاعات سنسور از اندروید دریافت نشد', 'warning');
+                }
+            }
+
+            showHardwareSensorStatus(
+                'light-status',
+                nativeInfo && nativeInfo.hasLightSensor,
+                nativeInfo && nativeInfo.lightSensorName,
+                5,
+                ('AmbientLightSensor' in window),
+                'سنسور نور محیط'
+            );
+            showHardwareSensorStatus(
+                'proximity-status',
+                nativeInfo && nativeInfo.hasProximitySensor,
+                nativeInfo && nativeInfo.proximitySensorName,
+                8,
+                ('ProximitySensor' in window || 'ondeviceproximity' in window),
+                'سنسور مجاورت'
+            );
 
             // NFC & Vibration
             const hasNFC = 'NDEFReader' in window;
